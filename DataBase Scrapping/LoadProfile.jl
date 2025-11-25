@@ -1,7 +1,7 @@
 using JSON3
 using DataFrames
 
-# -------- Load JSONL Profiles --------
+
 function load_profiles(path="profiles.jsonl")
     rows = Vector{Dict}()
 
@@ -16,7 +16,7 @@ function load_profiles(path="profiles.jsonl")
     return rows
 end
 
-# -------- Convert Dictionaries → DataFrame --------
+
 function profiles_to_dataframe(rows::Vector{Dict})
     df = DataFrame()
 
@@ -43,7 +43,7 @@ function profiles_to_dataframe(rows::Vector{Dict})
     return df
 end
 
-# -------- Add Derived Metrics --------
+
 function augment_dataframe(df)
 
     df.num_ecs = map(x -> x === missing || x === nothing ? 0 : length(x), df.extracurriculars)
@@ -51,7 +51,7 @@ function augment_dataframe(df)
     df.num_acceptances = map(x -> x === missing || x === nothing ? 0 : length(x), df.acceptances)
     df.num_rejections = map(x -> x === missing || x === nothing ? 0 : length(x), df.rejections)
 
-    # === FIX: Corrected STEM major logic ===
+
     stem_keywords = ["CS", "Computer", "Math", "Physics", "Bio", "Chem", "Engineering"]
 
     df.stem_major = [
@@ -61,7 +61,7 @@ function augment_dataframe(df)
         any(occursin(k, s) for s in m, k in stem_keywords)
         for m in df.majors
     ]
-    # === End of Fix ===
+
 
     t5 = [
         "Harvard University", "Stanford University", "Yale University",
@@ -104,7 +104,7 @@ function augment_dataframe(df)
     return df
 end
 
-# -------- Load + Convert + Augment --------
+
 function load_data(path="profiles.jsonl")
     println("Loading profiles from $path ...")
     rows = load_profiles(path)
@@ -123,4 +123,5 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
     df = load_data()
     println(df)
+
 end
