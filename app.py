@@ -26,8 +26,8 @@ except ImportError:
 
 # Set up
 
-st.set_page_config(layout="wide", page_title="CollegeBase Analytics")
-st.title("CollegeBase Admissions Analytics ")
+st.set_page_config(layout="wide", page_title="Swags super cool Analytics")
+st.title("Swags super cool Admissions Analytics ")
 
 
 #SAT/ACT Concordance Logic(ik this is super innefficient but idk please dont make fun of me)
