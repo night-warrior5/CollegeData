@@ -228,7 +228,7 @@ MAJOR_ALIASES = {
     "neuroscience": "Neuroscience",
 }
 
-# ACT-to-SAT Concordance Table (Based on 2018 College Board) 
+# ACT-to-SAT Concordance Table 
 # This maps ACT Composite to the nearest SAT equivalent
 ACT_TO_SAT_CONCORDANCE = {
     36: 1600, 35: 1570, 34: 1520, 33: 1490, 32: 1450, 31: 1420, 30: 1390,
