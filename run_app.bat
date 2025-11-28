@@ -1,6 +1,6 @@
 @echo off
 echo Installing required packages...
-python -m pip install streamlit pandas plotly numpy -q
+python -m pip install streamlit pandas plotly numpy sqlalchemy scikit-learn -q
 if errorlevel 1 (
     echo Error: Failed to install packages. Make sure Python is installed and in PATH.
     pause
@@ -14,4 +14,3 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-
