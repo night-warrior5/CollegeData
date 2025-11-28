@@ -3,7 +3,7 @@ import os
 import logging
 import json
 import sqlite3
-
+from sqlalchemy import text  # Imported 'text'
 
 import numpy as np
 import pandas as pd
@@ -1352,5 +1352,4 @@ with tab6:
     elif st.session_state.get("filters_applied", False):
         st.info("No profiles match the current filter selection.")
     else:
-
         st.info("Apply filters to see summary statistics based on the filtered dataset.")
