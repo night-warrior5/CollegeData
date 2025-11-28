@@ -221,7 +221,7 @@ with st.sidebar.expander("📊 Academic Filters", expanded=True):
         f"(≈ **ACT {min_act_eq}–{max_act_eq}**)"
     )
 
-with st.sidebar.expander("🎯 Profile Attributes", expanded=True):
+with st.sidebar.expander(" Profile Attributes", expanded=True):
     is_test_optional = st.checkbox(
         "Show Test Optional Only",
         value=st.session_state.active_test_optional,
@@ -249,7 +249,7 @@ with st.sidebar.expander("🎯 Profile Attributes", expanded=True):
         key="widget_race_filter",
     )
 
-with st.sidebar.expander("🏫 Acceptance Tiers"):
+with st.sidebar.expander("Acceptance Tiers"):
     tier_filter = st.multiselect(
         "Accepted to:",
         options=["T5", "T10", "T20", "T50"],
@@ -560,7 +560,7 @@ def display_profile_modal(profile_idx, context: str = ""):
 if all_schools:
     school_options = ["All Schools (from filters)"] + all_schools
     selected_school = st.selectbox(
-        "📌 Optional: Focus analytics on a specific school (overrides filters **for charts only**)",
+        " Optional: Focus analytics on a specific school (overrides filters **for charts only**)",
         options=school_options,
         index=0,
         key="graph_school_filter",
@@ -600,11 +600,11 @@ else:
 #  Main Tabs
 
 tab_names = [
-    "📊 Overview Charts",
-    "📋 Applicant Browser",
-    "📈 Advanced Analytics",
-    "🎯 Acceptance Patterns",
-    "📊 Summary Statistics",
+    " Overview Charts",
+    " Applicant Browser",
+    " Advanced Analytics",
+    " Acceptance Patterns",
+    " Summary Statistics",
 ]
 if SKLEARN_AVAILABLE:
     tab_names.insert(4, "🔍 Find Similar Profiles")
@@ -795,7 +795,7 @@ with tab2:
             )
 
         search_term = st.text_input(
-            "🔎 Search (GPA, SAT, Major, Race, etc.):", key="applicant_search"
+            " Search (GPA, SAT, Major, Race, etc.):", key="applicant_search"
         )
 
         if search_term:
@@ -1008,14 +1008,14 @@ with tab3:
 # TAB 4 – Acceptance Patterns
 
 with tab4:
-    st.subheader(f"🎯 Acceptance Patterns{graph_title_suffix}")
+    st.subheader(f"Acceptance Patterns{graph_title_suffix}")
 
     if len(graph_df) > 0:
         acceptance_col = None
         analysis_target = ""
 
         if selected_school != "All Schools (from filters)":
-            # --- Logic for specific school ---
+            # Logic for specific school
             def accepted_to_selected(row_):
                 acc = row_.get("acceptances", [])
                 return isinstance(acc, list) and selected_school in acc
