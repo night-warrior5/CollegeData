@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import numpy as np
 import hashlib
+import re # Import regex for better keyword matching
 
 
 # Core Utility Functions
@@ -49,7 +50,7 @@ def generate_profile_id(profile):
         str(profile.get('ib_classes')),
         str(profile.get('college_credit_classes')),
         '|'.join(profile.get('majors', [])),
-        profile.get('gender', ''),
+        str(profile.get('gender', '')),           # <-- THIS IS THE FIX
         '|'.join(profile.get('race', [])),
         # Sorted ECs/Awards ensure consistency
         '|'.join(profile.get('awards', [])),
@@ -274,6 +275,235 @@ def normalize_list_column(series, alias_map):
     return series.apply(normalize_list)
 
 
+# NEW COMPREHENSIVE KEYWORD MAPS
+
+EC_CATEGORY_MAP = {
+    # Research & Internships
+    "research": "Research",
+    "intern": "Internship",
+    "internship": "Internship",
+    "shadow": "Shadowing/Medical",
+    "hospital": "Shadowing/Medical",
+    "clinic": "Shadowing/Medical",
+    "medical": "Shadowing/Medical",
+    "lab assistant": "Research",
+    "research assistant": "Research",
+
+    # Academic Teams
+    "debate": "Speech/Debate",
+    "speech": "Speech/Debate",
+    "model un": "Model UN",
+    "mun": "Model UN",
+    "quiz bowl": "Quiz Bowl",
+    "science olympiad": "Science Olympiad",
+    "scioly": "Science Olympiad",
+    "math team": "Math Team",
+    "math club": "Math Team",
+    "academic team": "Academic Team",
+    "ethics bowl": "Academic Team",
+    "mock trial": "Mock Trial",
+
+    # Tech
+    "robotics": "Robotics",
+    "frc": "Robotics",
+    "ftc": "Robotics",
+    "vex": "Robotics",
+    "coding": "Coding",
+    "hackathon": "Hackathon",
+    "cs": "Tech/CS",
+    "computer science": "Tech/CS",
+    "app": "Passion Project",
+    "software": "Tech/CS",
+    "website": "Passion Project",
+    "usaco": "Olympiad (Computing)",
+
+    # Leadership & Volunteering
+    "founder": "Leadership",
+    "president": "Leadership",
+    "captain": "Leadership",
+    "leader": "Leadership",
+    "officer": "Leadership",
+    "editor-in-chief": "Writing/Journalism",
+    "director": "Leadership",
+    "manager": "Leadership",
+    "head": "Leadership",
+    "vp": "Leadership",
+    "vice president": "Leadership",
+    "secretary": "Leadership",
+    "treasurer": "Leadership",
+    "student government": "Student Government",
+    "student council": "Student Government",
+    "volunteer": "Community Service",
+    "service": "Community Service",
+    "food bank": "Community Service",
+    "nonprofit": "Non-Profit",
+    "non-profit": "Non-Profit",
+    "red cross": "Community Service",
+    "key club": "Community Service",
+    "nhs": "Community Service",
+
+    # Arts
+    "music": "Music/Arts",
+    "band": "Music/Arts",
+    "orchestra": "Music/Arts",
+    "choir": "Music/Arts",
+    "piano": "Music/Arts",
+    "violin": "Music/Arts",
+    "cello": "Music/Arts",
+    "trumpet": "Music/Arts",
+    "art": "Music/Arts",
+    "theatre": "Music/Arts",
+    "theater": "Music/Arts",
+    "film": "Music/Arts",
+    "dance": "Music/Arts",
+    "photography": "Music/Arts",
+    "writing": "Writing/Journalism",
+    "newspaper": "Writing/Journalism",
+    "journalism": "Writing/Journalism",
+    "literary magazine": "Writing/Journalism",
+
+    # Sports
+    "varsity": "Sport",
+    "jv": "Sport",
+    "sport": "Sport",
+    "soccer": "Sport",
+    "tennis": "Sport",
+    "track": "Sport",
+    "swim": "Sport",
+    "cross country": "Sport",
+    "football": "Sport",
+    "basketball": "Sport",
+    "volleyball": "Sport",
+    "fencing": "Sport",
+    "rowing": "Sport",
+    "wrestling": "Sport",
+    "golf": "Sport",
+    "hockey": "Sport",
+
+    # Other
+    "job": "Paid Job",
+    "work": "Paid Job",
+    "paid": "Paid Job",
+    "cashier": "Paid Job",
+    "barista": "Paid Job",
+    "receptionist": "Paid Job",
+    "lifeguard": "Paid Job",
+    "tutor": "Tutoring/Teaching",
+    "tutoring": "Tutoring/Teaching",
+    "teacher": "Tutoring/Teaching",
+    "teaching assistant": "Tutoring/Teaching",
+    "ta": "Tutoring/Teaching",
+    "instructor": "Tutoring/Teaching",
+    "coach": "Tutoring/Teaching",
+    "cultural": "Cultural Club",
+    "chinese": "Cultural Club",
+    "asian": "Cultural Club",
+    "black student union": "Cultural Club",
+    "jewish": "Cultural Club",
+    "hispanic": "Cultural Club",
+    "french": "Cultural Club",
+    "summer program": "Summer Program",
+    "summer school": "Summer Program",
+    "governor's school": "Summer Program",
+    "mostec": "Summer Program",
+    "yygs": "Summer Program",
+    "launchx": "Summer Program",
+    "chess": "Hobby/Club",
+    "baking": "Hobby/Club",
+    "cooking": "Hobby/Club",
+    "family responsibilit": "Family Responsibilities", # Partial match
+}
+
+AWARD_CATEGORY_MAP = {
+    # Academic
+    "ap scholar": "AP Scholar",
+    "national merit": "National Merit",
+    "semifinalist": "National Merit",
+    "finalist": "National Merit",
+    "commended": "National Merit",
+    "honor roll": "School Honor Roll",
+    "dean's list": "School Honor Roll",
+    "cum laude": "School Honor Roll",
+    "principal's list": "School Honor Roll",
+    "nhs": "NHS",
+    "national honor society": "NHS",
+    "questbridge": "QuestBridge",
+
+    # STEM Competitions
+    "aime": "Amc/Aime",
+    "amc": "Amc/Aime",
+    "math competition": "Other Math Competition",
+    "math olympiad": "Math Olympiad (USA)",
+    "usaco": "Computing Olympiad (USA)",
+    "usabo": "Biology Olympiad (USA)",
+    "usnco": "Chemistry Olympiad (USA)",
+    "usapho": "Physics Olympiad (USA)",
+    "olympiad": "Olympiad (USA)", # This is the generic fallback
+    "isef": "Isef/Other Science Fairs",
+    "science fair": "Isef/Other Science Fairs",
+    "regeneron": "Isef/Other Science Fairs",
+    "sts": "Isef/Other Science Fairs",
+
+    # Other Competitions
+    "deca": "Deca/Fbla",
+    "fbla": "Deca/Fbla",
+    "hosa": "HOSA",
+    "scholastic art": "Scholastic Art/Writing",
+    "scholastic writing": "Scholastic Art/Writing",
+    "science bowl": "Science Bowl",
+
+    # Scouting
+    "eagle scout": "Eagle Scout",
+    "gold award": "Eagle Scout",
+
+    # Other
+    "pvsa": "PVSA",
+    "president's volunteer service": "PVSA",
+    "national latin exam": "Language Award",
+    "national spanish exam": "Language Award",
+    "national french exam": "Language Award",
+    "seal of biliteracy": "Language Award",
+    "all-state": "Music/Art Award",
+    "all-region": "Music/Art Award",
+    "youngarts": "Music/Art Award",
+}
+
+def extract_categories(text_list, keyword_map):
+    """Iterates over a list of strings and extracts categories based on a keyword map."""
+    categories = set()
+    if not isinstance(text_list, list):
+        return []
+    
+    # Compile regex patterns for word boundary matching
+    # This prevents 'art' from matching 'startup'
+    compiled_keys = {
+        key: re.compile(r'\b' + re.escape(key) + r'\b', re.IGNORECASE) 
+        for key in keyword_map.keys()
+    }
+    
+    # Sort keys by length, descending.
+    # This ensures "math olympiad" is checked before "olympiad".
+    sorted_keys = sorted(keyword_map.keys(), key=len, reverse=True)
+    
+    for item in text_list:
+        item_str = str(item)
+        
+        # Iterate using the sorted_keys list
+        for key in sorted_keys: 
+            if compiled_keys[key].search(item_str):
+                # Add the category corresponding to the matched key
+                categories.add(keyword_map[key])
+                # Break from the inner loop to take the FIRST (most specific) match
+                break
+            
+    if not categories:
+        categories.add("Other")
+        
+    return sorted(list(categories))
+
+ 
+
+
 # Original functions
 
 def load_profiles(path="profiles.jsonl"):
@@ -284,21 +514,88 @@ def load_profiles(path="profiles.jsonl"):
             for line in f:
                 stripped = line.strip()
                 if stripped:
-                    rows.append(json.loads(stripped))
+                    try:
+                        rows.append(json.loads(stripped))
+                    except json.JSONDecodeError:
+                        print(f"Skipping malformed line: {line[:100]}...") # Log error
     except FileNotFoundError:
         print(f"Error: File '{path}' not found. Returning empty DataFrame.")
         return pd.DataFrame()
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON: {e}")
+    except Exception as e:
+        print(f"Error reading file: {e}")
         return pd.DataFrame()
 
     df = pd.DataFrame(rows)
-    # Ensure scores are numeric (NaN for nulls)
-    for col in ['gpa_unweighted', 'gpa_weighted', 'sat', 'act']:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # --- Data Cleaning: Handle malformed rows ---
+    # Some profiles from the user file have nested/malformed data.
+    # We will try to flatten them.
+    def clean_column(col_series, col_name):
+        def extract_value(x):
+            if isinstance(x, str) and '\n' in x:
+                # Heuristic: This looks like a malformed entry
+                # Example: "Politics\nRace:\nWhite\nGender:\nFemale..."
+                # We'll try to find the first meaningful line.
+                first_line = x.split('\n')[0].strip()
+                # print(f"Cleaning malformed entry in '{col_name}': '{x[:50]}...' -> '{first_line}'") # DEBUG
+                return [first_line] # Return as list for consistency
+            elif isinstance(x, list):
+                return x # Already a list, good.
+            elif pd.isna(x):
+                return [] # Use empty list for NaNs
+            else:
+                return [str(x)] # Convert other types to list of strings
+        
+        # Apply the cleaning function
+        cleaned = col_series.apply(extract_value)
+        
+        # Handle cases where `majors` might be a single string
+        if col_name == 'majors' and col_series.apply(type).eq(str).any():
+             # print(f"Warning: Found string-types in '{col_name}', converting.") # DEBUG
+             cleaned = col_series.apply(lambda x: [x] if isinstance(x, str) else (x if isinstance(x, list) else []))
+             
+        return cleaned
 
+    # List of columns that should be lists
+    list_cols = ['majors', 'race', 'awards', 'extracurriculars', 'acceptances', 'rejections']
+    for col in list_cols:
+        if col in df.columns:
+            df[col] = clean_column(df[col], col)
+        else:
+            # Add empty list as default for missing columns
+            df[col] = [[] for _ in range(len(df))] 
+            
+    # Normalize numeric and string columns
+    for col in ['gpa_unweighted', 'gpa_weighted', 'sat', 'act', 'ap_classes', 'ib_classes']:
+        if col in df.columns:
+            # Forcibly clean GPA strings like '95.3' before numeric conversion
+            if 'gpa' in col:
+                 df[col] = df[col].apply(lambda x: str(x).split('\n')[0].strip() if isinstance(x, str) else x)
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+    if 'gender' in df.columns:
+        df['gender'] = df['gender'].apply(lambda x: str(x).split('\n')[0].strip() if isinstance(x, str) else x)
+        df['gender'] = df['gender'].replace('nan', np.nan)
+
+
+    # Drop profiles that are mostly empty (e.g., just an ID)
+    df = df.dropna(subset=['gpa_unweighted', 'sat', 'act'], how='all')
+    
+    # --- THIS IS THE KEY CHANGE ---
+    # We will ALWAYS regenerate the profile_id from the content because
+    # the IDs in the source file are unreliable and duplicated.
+    print("Regenerating all profile IDs from content to ensure uniqueness...")
+    df['profile_id'] = df.apply(
+        lambda row: generate_profile_id(row.to_dict()), 
+        axis=1
+    )
+    # --- END OF KEY CHANGE ---
+
+    # Set profile_id as index
+    df = df.set_index('profile_id', drop=False)
+        
     return df.fillna(np.nan)
+
 
 def augment_dataframe(df):
     "Adds calculated columns like counts, STEM flag, and acceptance tiers."
@@ -316,7 +613,7 @@ def augment_dataframe(df):
     if 'rejections' in df.columns:
         df['rejections'] = normalize_list_column(df['rejections'], SCHOOL_ALIASES)
 
-        # Create sat_equivalent and test_optional columns 
+    # Create sat_equivalent and test_optional columns 
     print("Calculating SAT equivalent scores and Test Optional flag...")
 
     # Create the sat_equivalent column
@@ -352,6 +649,19 @@ def augment_dataframe(df):
         return any(major in stem_keywords for major in majors)
 
     df['stem_major'] = df['majors'].apply(is_stem_major)
+
+    # --- Extract EC and Award categories ---
+    print("Extracting EC and Award categories...")
+    if 'extracurriculars' in df.columns:
+        df['ec_categories'] = df['extracurriculars'].apply(
+            lambda x: extract_categories(x, EC_CATEGORY_MAP)
+        )
+    
+    if 'awards' in df.columns:
+        df['award_categories'] = df['awards'].apply(
+            lambda x: extract_categories(x, AWARD_CATEGORY_MAP)
+        )
+    # --- End new block ---
 
     # Tiered Acceptance Flags # Based on 2024-2025 US News National University Rankings
     
@@ -426,15 +736,25 @@ if __name__ == "__main__":
         
         if not df.empty:
             print("\nProcessed Data Snapshot (Top 5 Rows)")
-            print(df[['profile_id', 'gpa_unweighted', 'sat_equivalent', 'test_optional', 'majors', 
-                      'num_ecs', 'stem_major', 't5_accepted']].head())
+            # Show new category columns
+            print(df[['profile_id', 'gpa_unweighted', 'sat_equivalent', 
+                      'ec_categories', 'award_categories', 't20_accepted']].head())
             print(f"\nTotal Profiles Loaded: {len(df)}")
             
         
             try:
-                # Use to_json to save as JSONL (orient='records', lines=True)
-                df.to_json(data_path, orient="records", lines=True, force_ascii=False)
-                print(f"\n✔ Successfully saved {len(df)} fully analyzed profiles back to {data_path}.")
+                # --- MODIFIED SAVE LOGIC ---
+                # Now that we have re-generated all IDs, we can safely
+                # drop duplicates. This will only drop *true content* duplicates,
+                # not unique profiles that shared a bad ID.
+                df_to_save = df.drop_duplicates(subset=['profile_id'], keep='last')
+                
+                # We must reset the index so the 'profile_id' (which is the index)
+                # gets saved to the jsonl file.
+                df_to_save = df_to_save.reset_index(drop=True)
+                
+                df_to_save.to_json(data_path, orient="records", lines=True, force_ascii=False)
+                print(f"\n✔ Successfully saved {len(df_to_save)} fully analyzed profiles back to {data_path}.")
             except Exception as e:
                 print(f"\n❌ Error saving augmented data back to file: {e}")
             

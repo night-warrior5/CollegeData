@@ -1020,7 +1020,7 @@ with tab3:
 
 
 # TAB 4 – Acceptance Patterns
-
+# --- THIS IS THE MODIFIED SECTION ---
 with tab4:
     st.subheader(f"Acceptance Patterns{graph_title_suffix}")
 
@@ -1158,8 +1158,97 @@ with tab4:
                     st.dataframe(sat_summary_df, hide_index=True, use_container_width=True) 
                 else:
                     st.info("Not enough SAT data to compute ranges.")
+
+            # --- NEW SECTION FOR EC AND AWARD CATEGORIES ---
+            st.divider()
+            col3, col4 = st.columns(2)
+
+            with col3:
+                st.subheader("Acceptance Rate by EC Category")
+                if 'ec_categories' in graph_df.columns and not graph_df['ec_categories'].isnull().all():
+                    # Explode, count, and get top 10
+                    ec_counts = graph_df.explode('ec_categories')['ec_categories'].value_counts()
+                    top_10_ecs = ec_counts.nlargest(10).index
+                    
+                    ec_df = graph_df.explode('ec_categories')
+                    ec_df = ec_df[ec_df['ec_categories'].isin(top_10_ecs)] # Filter for top 10
+
+                    ec_summary = []
+                    for category, group in ec_df.groupby('ec_categories'):
+                        if len(group) > 0:
+                            accepted = group[acceptance_col].sum()
+                            rate = (accepted / len(group)) * 100
+                            ec_summary.append(
+                                {
+                                    "EC Category": category,
+                                    "Applicants": len(group),
+                                    "Acceptance Rate (%)": rate,
+                                }
+                            )
+                    
+                    if ec_summary:
+                        ec_summary_df = pd.DataFrame(ec_summary).sort_values("Acceptance Rate (%)", ascending=False)
+                        fig_ec_range = px.bar(
+                            ec_summary_df,
+                            x="EC Category",
+                            y="Acceptance Rate (%)",
+                            title=f"Acceptance Rate by Top 10 ECs – {analysis_target}",
+                            text="Applicants",
+                            color="Acceptance Rate (%)",
+                            color_continuous_scale="Purples",
+                        )
+                        st.plotly_chart(fig_ec_range, use_container_width=True)
+                        st.dataframe(ec_summary_df, hide_index=True, use_container_width=True)
+                    else:
+                        st.info("No data for EC categories.")
+                else:
+                    st.info("No EC category data available for this selection. (Have you re-run CollegeBase.py?)")
+            
+            with col4:
+                st.subheader("Acceptance Rate by Award Category")
+                if 'award_categories' in graph_df.columns and not graph_df['award_categories'].isnull().all():
+                    # Explode, count, and get top 10
+                    award_counts = graph_df.explode('award_categories')['award_categories'].value_counts()
+                    top_10_awards = award_counts.nlargest(10).index
+                    
+                    award_df = graph_df.explode('award_categories')
+                    award_df = award_df[award_df['award_categories'].isin(top_10_awards)]
+
+                    award_summary = []
+                    for category, group in award_df.groupby('award_categories'):
+                        if len(group) > 0:
+                            accepted = group[acceptance_col].sum()
+                            rate = (accepted / len(group)) * 100
+                            award_summary.append(
+                                {
+                                    "Award Category": category,
+                                    "Applicants": len(group),
+                                    "Acceptance Rate (%)": rate,
+                                }
+                            )
+                    
+                    if award_summary:
+                        award_summary_df = pd.DataFrame(award_summary).sort_values("Acceptance Rate (%)", ascending=False)
+                        fig_award_range = px.bar(
+                            award_summary_df,
+                            x="Award Category",
+                            y="Acceptance Rate (%)",
+                            title=f"Acceptance Rate by Top 10 Awards – {analysis_target}",
+                            text="Applicants",
+                            color="Acceptance Rate (%)",
+                            color_continuous_scale="Oranges",
+                        )
+                        st.plotly_chart(fig_award_range, use_container_width=True)
+                        st.dataframe(award_summary_df, hide_index=True, use_container_width=True)
+                    else:
+                        st.info("No data for Award categories.")
+                else:
+                    st.info("No Award category data available for this selection. (Have you re-run CollegeBase.py?)")
+
     else:
         st.info("No profiles to display.")
+
+# --- END OF MODIFIED SECTION ---
 
 
 # TAB 5 – Profile Matching
