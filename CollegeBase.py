@@ -76,13 +76,29 @@ def enter_by_prompt():
 
     sat_in = prompt("SAT (or 'none'):")
     sat = None
-    if sat_in.lower() != "none" and sat_in.isdigit():
-        sat = int(sat_in)
+    if sat_in.lower() not in ["none", ""]:
+        try:
+            sat_float = float(sat_in)
+            sat = int(sat_float) 
+            
+            if sat != sat_float or "." in sat_in:
+                print(f"  -> Decimal detected. Saving score as {sat}.")
+                
+        except ValueError:
+            print(f"  -> Invalid SAT input '{sat_in}'. Saving as 'none'.")
 
     act_in = prompt("ACT (or 'none'):")
     act = None
-    if act_in.lower() != "none" and act_in.isdigit():
-        act = int(act_in)
+    if act_in.lower() not in ["none", ""]:
+        try:
+            act_float = float(act_in)
+            act = int(act_float)
+            
+            if act != act_float or "." in act_in:
+                 print(f"  -> Decimal detected. Saving score as {act}.")
+                 
+        except ValueError:
+            print(f"  -> Invalid ACT input '{act_in}'. Saving as 'none'.")
 
     ap_classes = int(prompt("Number of AP classes (0 if none):") or 0)
     ib_classes = int(prompt("Number of IB classes (0 if none):") or 0)

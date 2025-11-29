@@ -259,7 +259,7 @@ with st.sidebar.expander("Acceptance Tiers"):
 
 col_btn1, col_btn2 = st.sidebar.columns(2)
 with col_btn1:
-    if st.button("Apply Filters", width='stretch'): # <-- FIX
+    if st.button("Apply Filters", use_container_width=True):
         st.session_state.filters_applied = True
         st.session_state.active_gpa_range = st.session_state.widget_gpa_range
         st.session_state.active_sat_eq_range = st.session_state.widget_sat_eq_range
@@ -272,7 +272,7 @@ with col_btn1:
         st.rerun()
 
 with col_btn2:
-    if st.button("Reset", width='stretch'): # <-- FIX
+    if st.button("Reset", use_container_width=True):
         for key in [
             "filters_applied",
             "active_gpa_range",
@@ -691,7 +691,7 @@ with tab1:
                     # 1. Capture the chart's event data
                     chart_event = st.plotly_chart(
                         fig, 
-                        width='stretch', # <-- FIX
+                        use_container_width=True, 
                         key="scatter_plot",
                         on_select="rerun" # Use rerun on select
                     )
@@ -733,7 +733,7 @@ with tab1:
                     },
                     title=f"Distribution of EC Counts{graph_title_suffix}",
                 )
-                st.plotly_chart(fig_ecs, width='stretch') # <-- FIX
+                st.plotly_chart(fig_ecs, use_container_width=True) 
 
             else:
                 st.info("Extracurricular data not available.")
@@ -748,7 +748,7 @@ with tab1:
                     },
                     title=f"Distribution of Award Counts{graph_title_suffix}",
                 )
-                st.plotly_chart(fig_awards, width='stretch') # <-- FIX
+                st.plotly_chart(fig_awards, use_container_width=True) 
             else:
                 st.info("Award data not available.")
         else:
@@ -839,7 +839,7 @@ with tab2:
         display_cols_final = [c for c in page_df.columns if c != "Profile ID"]
         st.dataframe(
             page_df[display_cols_final],
-            width='stretch', # <-- FIX
+            use_container_width=True, 
             hide_index=True,
         )
 
@@ -915,7 +915,7 @@ with tab3:
                     title=f"GPA Distribution{graph_title_suffix}",
                     labels={"gpa_unweighted": "Unweighted GPA"},
                 )
-                st.plotly_chart(fig_gpa_box, width='stretch') # <-- FIX
+                st.plotly_chart(fig_gpa_box, use_container_width=True) 
 
             if "sat_equivalent" in graph_df.columns:
                 st.subheader("SAT Equivalent Distribution")
@@ -927,7 +927,7 @@ with tab3:
                         title=f"SAT Equivalent Distribution{graph_title_suffix}",
                         labels={"sat_equivalent": "SAT Equivalent Score"},
                     )
-                    st.plotly_chart(fig_sat_box, width='stretch') # <-- FIX
+                    st.plotly_chart(fig_sat_box, use_container_width=True) 
                 else:
                     st.info("No profiles with SAT scores to display.")
 
@@ -972,7 +972,7 @@ with tab3:
                         color="Major Type",
                         color_discrete_map={"STEM": "#4CAF50", "Non-STEM": "#2196F3"},
                     )
-                    st.plotly_chart(fig_major, width='stretch') # <-- FIX
+                    st.plotly_chart(fig_major, use_container_width=True) 
             elif selected_school != "All Schools (from filters)":
                 st.info("STEM major data not available for this view.")
             else:
@@ -990,15 +990,29 @@ with tab3:
 
         if len(available_numeric) > 1:
             corr_df = graph_df[available_numeric].corr()
+            
+            # --- MODIFIED CODE ---
+            # User wants Red (weak) -> Yellow (mid) -> Lighter Green (strong)
+            # Default "RdYlGn" green is rgb(26, 152, 80).
+            # We will use a softer, "less deep" green: rgb(102, 189, 99)
+            custom_colorscale = [
+                [0.0, 'rgb(215, 25, 28)'],  # Weak (Red)
+                [0.5, 'rgb(255, 255, 191)'], # Mid (Yellow)
+                [1.0, 'rgb(102, 189, 99)']   # Strong (Lighter Green)
+            ]
+
             fig_corr = px.imshow(
                 corr_df,
                 labels=dict(color="Correlation"),
                 title=f"Correlation Matrix{graph_title_suffix}",
-                color_continuous_scale="RdBu",
+                color_continuous_scale=custom_colorscale, # Using custom scale
                 text_auto=True,
                 aspect="auto",
+                range_color=[0, 1] # Set the scale from 0 to 1
             )
-            st.plotly_chart(fig_corr, width='stretch') # <-- FIX
+            # --- END MODIFIED CODE ---
+            
+            st.plotly_chart(fig_corr, use_container_width=True) 
         else:
             st.info("Not enough numeric columns for correlation analysis.")
     else:
@@ -1085,8 +1099,8 @@ with tab4:
                         color="Acceptance Rate (%)",
                         color_continuous_scale="Greens",
                     )
-                    st.plotly_chart(fig_gpa_range, width='stretch') # <-- FIX
-                    st.dataframe(gpa_summary_df, hide_index=True, width='stretch') # <-- FIX
+                    st.plotly_chart(fig_gpa_range, use_container_width=True) 
+                    st.dataframe(gpa_summary_df, hide_index=True, use_container_width=True) 
                 else:
                     st.info("Not enough GPA data to compute ranges.")
 
@@ -1140,8 +1154,8 @@ with tab4:
                         color="Acceptance Rate (%)",
                         color_continuous_scale="Blues",
                     )
-                    st.plotly_chart(fig_sat_range, width='stretch') # <-- FIX
-                    st.dataframe(sat_summary_df, hide_index=True, width='stretch') # <-- FIX
+                    st.plotly_chart(fig_sat_range, use_container_width=True) 
+                    st.dataframe(sat_summary_df, hide_index=True, use_container_width=True) 
                 else:
                     st.info("Not enough SAT data to compute ranges.")
     else:
@@ -1329,7 +1343,7 @@ with tab6:
                         labels={'x': 'Major', 'y': 'Count'}
                     )
                     fig_majors.update_layout(xaxis_title="Major", yaxis_title="Count")
-                    st.plotly_chart(fig_majors, width='stretch') # <-- FIX
+                    st.plotly_chart(fig_majors, use_container_width=True) 
                 else:
                     st.info("No major data to display for this filter.")
 
@@ -1345,7 +1359,7 @@ with tab6:
                         hole=0.3,
                         title="Race Distribution"
                     )
-                    st.plotly_chart(fig_race, width='stretch') # <-- FIX
+                    st.plotly_chart(fig_race, use_container_width=True) 
                 else:
                     st.info("No race data to display for this filter.")
 
