@@ -115,7 +115,7 @@ def save_profile(profile, path="profiles.jsonl"):
     # Check for duplicates
     duplicate_found = False
     try:
-        with open(path, "r") as f:
+        with open(path, "r", encoding='utf-8') as f:
             for line in f:
                 stripped = line.strip()
                 if not stripped:
@@ -264,7 +264,7 @@ def load_profiles(path="profiles.jsonl"):
     "Loads profiles from a JSON Lines file into a Pandas DataFrame."
     rows = []
     try:
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             for line in f:
                 stripped = line.strip()
                 if stripped:
@@ -337,11 +337,37 @@ def augment_dataframe(df):
 
     df['stem_major'] = df['majors'].apply(is_stem_major)
 
-    # Tiered Acceptance Flags 
-    t5 = ["Harvard University", "Stanford University", "Yale University", "Princeton University", "Massachusetts Institute of Technology"]
-    t10 = t5 + ["University of Chicago", "Columbia University", "University of Pennsylvania", "California Institute of Technology"]
-    t20 = t10 + ["Dartmouth College", "Brown University", "Duke University", "Northwestern University", "Cornell University", "Johns Hopkins University", "Rice University"]
-    t50 = t20 + ["University of California, Los Angeles", "University of California, Berkeley", "Carnegie Mellon University", "University of Michigan-Ann Arbor", "University of Southern California", "Emory University", "New York University", "Georgetown University", "University of Virginia", "Tufts University", "University of California, San Diego", "Wake Forest University", "Boston College", "University of Rochester", "Georgia Institute of Technology", "Brandeis University", "Case Western Reserve University", "William & Mary", "Northeastern University"]
+    # Tiered Acceptance Flags # Based on 2024-2025 US News National University Rankings
+    
+    t5 = [
+        "Princeton University", "Massachusetts Institute of Technology", "Harvard University", "Stanford University", "California Institute of Technology"
+    ]
+    
+    t10 = [
+        "Princeton University", "Massachusetts Institute of Technology", "Harvard University", "Stanford University", "California Institute of Technology",
+        "University of Chicago", "Yale University", "University of Pennsylvania", "Johns Hopkins University", "Brown University",
+        "Columbia University", "Northwestern University"
+    ] # 12 schools due to 3-way tie at #9
+
+    t20 = [
+        "Princeton University", "Massachusetts Institute of Technology", "Harvard University", "Stanford University", "California Institute of Technology",
+        "University of Chicago", "Yale University", "University of Pennsylvania", "Johns Hopkins University", "Brown University",
+        "Columbia University", "Northwestern University", "Cornell University", "University of California, Berkeley", "University of California, Los Angeles",
+        "Dartmouth College", "Duke University", "University of Michigan-Ann Arbor", "Vanderbilt University"
+    ] # 19 schools due to 2-way tie at #18
+    
+    t50 = [
+        "Princeton University", "Massachusetts Institute of Technology", "Harvard University", "Stanford University", "California Institute of Technology",
+        "University of Chicago", "Yale University", "University of Pennsylvania", "Johns Hopkins University", "Brown University",
+        "Columbia University", "Northwestern University", "Cornell University", "University of California, Berkeley", "University of California, Los Angeles",
+        "Dartmouth College", "Duke University", "University of Michigan-Ann Arbor", "Vanderbilt University", "Rice University",
+        "University of Notre Dame", "Washington University in St. Louis", "Carnegie Mellon University", "Emory University", "Georgetown University",
+        "University of Florida", "University of North Carolina, Chapel Hill", "University of Southern California", "University of Virginia", "University of California, Davis",
+        "University of California, San Diego", "University of Wisconsin-Madison", "Boston College", "Georgia Institute of Technology", "New York University",
+        "University of Illinois, Urbana Champaign", "University of Texas at Austin", "Boston University", "Rutgers University-New Brunswick", "Tufts University",
+        "University of Washington", "Case Western Reserve University", "Florida State University", "Northeastern University", "University of California, Irvine",
+        "University of California, Santa Barbara", "Purdue University-Main Campus", "University of Georgia", "University of Maryland-College Park", "University of Rochester"
+    ]
 
     def accepted_in(acceptances, tier_list):
         if not isinstance(acceptances, list) or not acceptances:
@@ -369,7 +395,7 @@ if __name__ == "__main__":
     
     print("\n\nCollegeBase Data Management System")
     print("1. Enter a New Profile (Input Mode)")
-    print("2. Load and Analyze Existing Data (Analysis Mode)")
+    print("2. Load, Analyze, and Save Data (Processing Mode)")
     
     mode = prompt("Select mode (1 or 2):")
     
@@ -378,15 +404,25 @@ if __name__ == "__main__":
         save_profile(profile)
         
     elif mode == '2':
-        df = load_data()
+    
+        data_path = "profiles.jsonl"
+        df = load_data(data_path)
         
         if not df.empty:
-            print("\nProcessed Data Snapshot")
+            print("\nProcessed Data Snapshot (Top 5 Rows)")
             print(df[['profile_id', 'gpa_unweighted', 'sat_equivalent', 'test_optional', 'majors', 
                       'num_ecs', 'stem_major', 't5_accepted']].head())
             print(f"\nTotal Profiles Loaded: {len(df)}")
             
-            # This is where future analysis features would hook in (future features)    
+        
+            try:
+                # Use to_json to save as JSONL (orient='records', lines=True)
+                df.to_json(data_path, orient="records", lines=True, force_ascii=False)
+                print(f"\n✔ Successfully saved {len(df)} fully analyzed profiles back to {data_path}.")
+            except Exception as e:
+                print(f"\n❌ Error saving augmented data back to file: {e}")
+            
+            
             print("\nReady for Trend Analysis and UI features...")
             
     else:
