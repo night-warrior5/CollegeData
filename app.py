@@ -3,7 +3,7 @@ import os
 import logging
 import json
 import sqlite3
-from sqlalchemy import text  
+from sqlalchemy import text  # Imported 'text'
 
 import numpy as np
 import pandas as pd
@@ -161,6 +161,15 @@ if df.empty:
 # Precompute option lists from raw data
 all_majors = sorted(list(df["majors"].explode().dropna().astype(str).unique()))
 all_races = sorted(list(df["race"].explode().dropna().astype(str).unique()))
+
+# --- NEW: Get EC and Award categories for filters ---
+all_ec_categories = sorted(list(df["ec_categories"].explode().dropna().astype(str).unique()))
+all_award_categories = sorted(list(df["award_categories"].explode().dropna().astype(str).unique()))
+# Remove "Other" as it's not a useful filter
+if "Other" in all_ec_categories: all_ec_categories.remove("Other")
+if "Other" in all_award_categories: all_award_categories.remove("Other")
+# --- END NEW ---
+
 acceptances_set = set(df["acceptances"].explode().dropna().astype(str).unique())
 rejections_set = set(df["rejections"].explode().dropna().astype(str).unique())
 all_schools = sorted(list(acceptances_set | rejections_set))
@@ -181,6 +190,8 @@ if "filters_applied" not in st.session_state:
     st.session_state.active_major_filter = []
     st.session_state.active_race_filter = []
     st.session_state.active_tier_filter = []
+    st.session_state.active_ec_filter = []      # <-- ADDED
+    st.session_state.active_award_filter = []   # <-- ADDED
 
 if "selected_profile_idx" not in st.session_state:
     st.session_state.selected_profile_idx = None
@@ -189,6 +200,10 @@ if "selected_profile_idx" not in st.session_state:
 # This will hold the search results for the "Find Similar" tab
 if "similar_profiles" not in st.session_state:
     st.session_state.similar_profiles = None
+
+# Flag to prevent table selection from re-opening modal immediately after close
+if "modal_just_closed" not in st.session_state:
+    st.session_state.modal_just_closed = False
 
 
 
@@ -254,6 +269,26 @@ with st.sidebar.expander(" Profile Attributes", expanded=True):
         key="widget_race_filter",
     )
 
+# --- NEW FILTER SECTION ---
+with st.sidebar.expander(" 🏆 EC & Award Filters"):
+    ec_category_filter = st.multiselect(
+        "Filter by EC Category:",
+        options=all_ec_categories,
+        default=st.session_state.active_ec_filter,
+        key="widget_ec_filter",
+        help="Show profiles that have at least one of the selected EC categories."
+    )
+
+    award_category_filter = st.multiselect(
+        "Filter by Award Category:",
+        options=all_award_categories,
+        default=st.session_state.active_award_filter,
+        key="widget_award_filter",
+        help="Show profiles that have at least one of the selected Award categories."
+    )
+# --- END NEW FILTER SECTION ---
+
+
 with st.sidebar.expander("Acceptance Tiers"):
     tier_filter = st.multiselect(
         "Accepted to:",
@@ -273,11 +308,12 @@ with col_btn1:
         st.session_state.active_major_filter = st.session_state.widget_major_filter
         st.session_state.active_race_filter = st.session_state.widget_race_filter
         st.session_state.active_tier_filter = st.session_state.widget_tier_filter
+        st.session_state.active_ec_filter = st.session_state.widget_ec_filter       # <-- ADDED
+        st.session_state.active_award_filter = st.session_state.widget_award_filter # <-- ADDED
         st.session_state.selected_profile_idx = None
     
         # Clear similar profile results when filters change
         st.session_state.similar_profiles = None
-        # --- END MODIFIED ---
         st.rerun()
 
 with col_btn2:
@@ -291,13 +327,13 @@ with col_btn2:
             "active_major_filter",
             "active_race_filter",
             "active_tier_filter",
+            "active_ec_filter",      # <-- ADDED
+            "active_award_filter",   # <-- ADDED
         ]:
             st.session_state.pop(key, None)
         st.session_state.selected_profile_idx = None
-        # --- MODIFIED ---
         # Clear similar profile results when filters are reset
         st.session_state.pop("similar_profiles", None)
-        # --- END MODIFIED ---
         st.rerun()
 
 # Sidebar metrics
@@ -318,6 +354,9 @@ def apply_filters(df_in: pd.DataFrame) -> pd.DataFrame:
     major_filter_ = st.session_state.active_major_filter
     race_filter_ = st.session_state.active_race_filter
     tier_filter_ = st.session_state.active_tier_filter
+    ec_filter_ = st.session_state.active_ec_filter           # <-- ADDED
+    award_filter_ = st.session_state.active_award_filter     # <-- ADDED
+
 
     # Test Optional
     if is_test_optional_:
@@ -378,6 +417,26 @@ def apply_filters(df_in: pd.DataFrame) -> pd.DataFrame:
 
         filtered_df_ = filtered_df_[mask]
 
+    # --- NEW FILTER LOGIC ---
+    # EC Category Filter
+    if ec_filter_:
+        def has_ec_category(ecs):
+            if not isinstance(ecs, list):
+                return False
+            return any(ec in ecs for ec in ec_filter_)
+
+        filtered_df_ = filtered_df_[filtered_df_["ec_categories"].apply(has_ec_category)]
+
+    # Award Category Filter
+    if award_filter_:
+        def has_award_category(awards):
+            if not isinstance(awards, list):
+                return False
+            return any(award in awards for award in award_filter_)
+
+        filtered_df_ = filtered_df_[filtered_df_["award_categories"].apply(has_award_category)]
+    # --- END NEW FILTER LOGIC ---
+
     return filtered_df_
 
 
@@ -413,6 +472,14 @@ if st.session_state.get("filters_applied", False):
 
     if st.session_state.active_race_filter:
         filter_chips.append(f"Race: {', '.join(st.session_state.active_race_filter)}")
+    
+    # --- ADDED ---
+    if st.session_state.active_ec_filter:
+        filter_chips.append(f"ECs: {', '.join(st.session_state.active_ec_filter)}")
+
+    if st.session_state.active_award_filter:
+        filter_chips.append(f"Awards: {', '.join(st.session_state.active_award_filter)}")
+    # --- END ADDED ---
 
     if st.session_state.active_tier_filter:
         filter_chips.append(f"Tiers: {', '.join(st.session_state.active_tier_filter)}")
@@ -563,6 +630,7 @@ def display_profile_modal(profile_idx, context: str = ""):
                 save_rating(profile_id, rating)
                 st.success(f"Rating of {rating}/10 submitted!")
                 st.session_state.selected_profile_idx = None # This closes the dialog
+                st.session_state.modal_just_closed = True
                 st.rerun()
         
 
@@ -570,6 +638,9 @@ def display_profile_modal(profile_idx, context: str = ""):
             st.write(" ") # Align button
             if st.button("Close", key=f"close_{unique_suffix}"):
                 st.session_state.selected_profile_idx = None # This closes the dialog
+            
+                st.session_state.modal_just_closed = True
+                
                 st.rerun()
 
     # Call the function to open the dialog
@@ -731,9 +802,7 @@ with tab1:
                             # 4. Set the session state
                             if st.session_state.selected_profile_idx != selected_idx_from_plot:
                                 st.session_state.selected_profile_idx = selected_idx_from_plot
-                                # --- MODIFIED: REMOVED st.rerun() ---
                                 # The 'on_select="rerun"' already handles this.
-                                # st.rerun() 
 
 
                 else:
@@ -861,58 +930,38 @@ with tab2:
 
         page_df = display_df.iloc[start_idx:end_idx].copy()
         display_cols_final = [c for c in page_df.columns if c != "Profile ID"]
+        
         st.dataframe(
             page_df[display_cols_final],
             use_container_width=True, 
             hide_index=True,
+            on_select="rerun", # Trigger a rerun when a row is clicked
+            selection_mode="single-row",
+            key="browser_table" # Key to access selection state
         )
+        
+        st.caption("💡 Tip: Click any row in the table to view the full profile.")
 
-        st.subheader("View Full Profile")
-        profile_options = {}
-        for idx, row in page_df.iterrows():
-            profile_id = row["Profile ID"]
-            gpa = row.get("gpa_unweighted", "N/A")
-            sat_eq_val = row.get("sat_equivalent", "N/A")
-            is_to = row.get("test_optional", False)
-
-            gpa_str = (
-                f"{gpa:.2f}"
-                if isinstance(gpa, (int, float)) and not pd.isna(gpa)
-                else "N/A"
-            )
-            sat_str = (
-                f"{int(sat_eq_val)}"
-                if isinstance(sat_eq_val, (int, float)) and not pd.isna(sat_eq_val)
-                else "N/A"
-            )
-            if is_to:
-                sat_str = "Test Optional"
-
-            profile_options[profile_id] = f"GPA: {gpa_str}, Score: {sat_str} (ID: ...{str(profile_id)[-6:]})"
-
-        if profile_options:
+        # Check if a selection was made in the table
+        if st.session_state.browser_table and st.session_state.browser_table.selection.rows:
             
-            # Find the index of the currently selected profile, if it's in the list
-            current_selection = st.session_state.get("selected_profile_idx")
-            options_keys = list(profile_options.keys())
-            try:
-                default_index = options_keys.index(current_selection) + 1
-            except ValueError:
-                default_index = 0 
-
-            selected_profile_id = st.selectbox(
-                "Select a profile to view full details:",
-                options=[None] + options_keys,
-                format_func=lambda x: "Select a Profile "
-                if x is None
-                else profile_options[x],
-                key="table_profile_selector",
-                index=default_index
-            )
-            
-           
-            if selected_profile_id != current_selection:
-                st.session_state.selected_profile_idx = selected_profile_id
+            # Check flag to see if we just closed the modal
+            if not st.session_state.get("modal_just_closed", False):
+                # Get the integer index (iloc) of the first selected row
+                selected_row_iloc = st.session_state.browser_table.selection.rows[0]
+                
+                # Get the Profile ID from that row's "Profile ID" column
+                # We must use .iloc on page_df to match the dataframe's selection index
+                selected_profile_id = page_df.iloc[selected_row_iloc]["Profile ID"]
+    
+                # Set the session state to show the modal
+                if st.session_state.selected_profile_idx != selected_profile_id:
+                    st.session_state.selected_profile_idx = selected_profile_id
+                    st.rerun() # Add a rerun to ensure state is clean
+            else:
+                # We just closed the modal, so clear the flag and do nothing
+                # This prevents the modal from re-opening instantly
+                st.session_state.modal_just_closed = False
        
     else:
         st.info("No applicants to display with current filters.")
