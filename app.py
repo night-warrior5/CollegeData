@@ -3,7 +3,7 @@ import os
 import logging
 import json
 import sqlite3
-from sqlalchemy import text  # Imported 'text'
+from sqlalchemy import text  
 
 import numpy as np
 import pandas as pd
@@ -12,9 +12,6 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from CollegeBase import load_data
-
-
-#  Global Configuration and User Experience Polishing
 
 
 warnings.filterwarnings("ignore", message=".*ScriptRunContext.*")
@@ -1534,3 +1531,4 @@ with tab6:
 if st.session_state.selected_profile_idx is not None:
 
     display_profile_modal(st.session_state.selected_profile_idx, context="global")
+
