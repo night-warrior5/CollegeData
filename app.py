@@ -21,7 +21,6 @@ warnings.filterwarnings("ignore", message=".*ScriptRunContext.*")
 warnings.filterwarnings("ignore", category=UserWarning)
 logging.getLogger("streamlit.runtime.scriptrunner.script_runner").setLevel(logging.ERROR)
 
-# Optional imports for profile matching
 try:
     from sklearn.neighbors import NearestNeighbors
     from sklearn.preprocessing import StandardScaler
@@ -34,7 +33,7 @@ except ImportError:
     )
 
 
-# Streamlit page config
+
 st.set_page_config(
     layout="wide",
     page_title="Admissions Insights Dashboard",
@@ -187,6 +186,12 @@ if "selected_profile_idx" not in st.session_state:
     st.session_state.selected_profile_idx = None
 
 
+# This will hold the search results for the "Find Similar" tab
+if "similar_profiles" not in st.session_state:
+    st.session_state.similar_profiles = None
+
+
+
 #  Sidebar Filters
 
 st.sidebar.header("Filters")
@@ -269,6 +274,10 @@ with col_btn1:
         st.session_state.active_race_filter = st.session_state.widget_race_filter
         st.session_state.active_tier_filter = st.session_state.widget_tier_filter
         st.session_state.selected_profile_idx = None
+    
+        # Clear similar profile results when filters change
+        st.session_state.similar_profiles = None
+        # --- END MODIFIED ---
         st.rerun()
 
 with col_btn2:
@@ -285,6 +294,10 @@ with col_btn2:
         ]:
             st.session_state.pop(key, None)
         st.session_state.selected_profile_idx = None
+        # --- MODIFIED ---
+        # Clear similar profile results when filters are reset
+        st.session_state.pop("similar_profiles", None)
+        # --- END MODIFIED ---
         st.rerun()
 
 # Sidebar metrics
@@ -458,14 +471,17 @@ def get_nn_model(_filtered_df):
 #  Profile Viewer (Dialog)
 
 def display_profile_modal(profile_idx, context: str = ""):
-    #Display a full profile in a st.dialog (modal) window.
-    
-    if profile_idx not in filtered_df.index:
-        st.warning("Selected profile is no longer in the filtered view. Please re-apply filters.")
+
+    # This ensures profiles from 'graph_df' (school-specific) can be found
+    if profile_idx not in df.index: 
+        st.warning(f"Selected profile (ID: {profile_idx}) not found in master 'df'. Please reset.")
         st.session_state.selected_profile_idx = None
+        st.rerun() # Rerun to clear the bad state
         return
 
-    profile = filtered_df.loc[profile_idx]
+    profile = df.loc[profile_idx] # Get data from the master 'df'
+ 
+    
     profile_id = str(profile.get("profile_id", "N/A"))
     unique_suffix = f"{profile_idx}_{context}" if context else str(profile_idx)
 
@@ -530,7 +546,8 @@ def display_profile_modal(profile_idx, context: str = ""):
         if avg_rating is not None:
             st.write(f"**Current Average Rating:** {avg_rating:.1f}/10")
 
-        rating_col1, rating_col2 = st.columns([3, 1])
+  
+        rating_col1, rating_col2, rating_col3 = st.columns([2, 1, 1])
         with rating_col1:
             rating = st.slider(
                 "Impact Rating (1–10):",
@@ -541,18 +558,24 @@ def display_profile_modal(profile_idx, context: str = ""):
             )
         with rating_col2:
             st.write(" ") # Align button
+      
             if st.button("Submit Rating", key=f"submit_{unique_suffix}"):
                 save_rating(profile_id, rating)
                 st.success(f"Rating of {rating}/10 submitted!")
-                # Button click closes dialog, rerun will show new avg
+                st.session_state.selected_profile_idx = None # This closes the dialog
+                st.rerun()
+        
+
+        with rating_col3:
+            st.write(" ") # Align button
+            if st.button("Close", key=f"close_{unique_suffix}"):
+                st.session_state.selected_profile_idx = None # This closes the dialog
                 st.rerun()
 
     # Call the function to open the dialog
     show_profile_dialog()
 
-    # After the dialog closes, clear the selected_profile_idx
-    # so it doesn't re-open on the next rerun
-    st.session_state.selected_profile_idx = None
+
 
 
 #  School Selection for Charts
@@ -708,7 +731,10 @@ with tab1:
                             # 4. Set the session state
                             if st.session_state.selected_profile_idx != selected_idx_from_plot:
                                 st.session_state.selected_profile_idx = selected_idx_from_plot
-                                st.rerun() # Rerun to show the modal
+                                # --- MODIFIED: REMOVED st.rerun() ---
+                                # The 'on_select="rerun"' already handles this.
+                                # st.rerun() 
+
 
                 else:
                     st.info(
@@ -754,9 +780,7 @@ with tab1:
         else:
             st.info("No profiles to display.")
 
-    # This call will now be triggered by the chart click
-    if st.session_state.selected_profile_idx is not None:
-        display_profile_modal(st.session_state.selected_profile_idx, context="tab1")
+
 
 
 # TAB 2 – Applicant Browser
@@ -874,28 +898,25 @@ with tab2:
             try:
                 default_index = options_keys.index(current_selection) + 1
             except ValueError:
-                default_index = 0 # Default to "--- Select a Profile ---"
+                default_index = 0 
 
             selected_profile_id = st.selectbox(
                 "Select a profile to view full details:",
                 options=[None] + options_keys,
-                format_func=lambda x: "--- Select a Profile ---"
+                format_func=lambda x: "Select a Profile "
                 if x is None
                 else profile_options[x],
                 key="table_profile_selector",
                 index=default_index
             )
             
-            # If selection changes, update state and rerun to open modal
+           
             if selected_profile_id != current_selection:
                 st.session_state.selected_profile_idx = selected_profile_id
-                st.rerun()
+       
     else:
         st.info("No applicants to display with current filters.")
     
-    # Modal display logic for this tab
-    if st.session_state.selected_profile_idx is not None:
-        display_profile_modal(st.session_state.selected_profile_idx, context="tab2")
 
 
 # TAB 3 – Advanced Analytics
@@ -991,26 +1012,23 @@ with tab3:
         if len(available_numeric) > 1:
             corr_df = graph_df[available_numeric].corr()
             
-            # --- MODIFIED CODE ---
-            # User wants Red (weak) -> Yellow (mid) -> Lighter Green (strong)
-            # Default "RdYlGn" green is rgb(26, 152, 80).
-            # We will use a softer, "less deep" green: rgb(102, 189, 99)
+
             custom_colorscale = [
-                [0.0, 'rgb(215, 25, 28)'],  # Weak (Red)
-                [0.5, 'rgb(255, 255, 191)'], # Mid (Yellow)
-                [1.0, 'rgb(102, 189, 99)']   # Strong (Lighter Green)
+                [0.0, 'rgb(215, 25, 28)'],  
+                [0.5, 'rgb(255, 255, 191)'], 
+                [1.0, 'rgb(102, 189, 99)']  
             ]
 
             fig_corr = px.imshow(
                 corr_df,
                 labels=dict(color="Correlation"),
                 title=f"Correlation Matrix{graph_title_suffix}",
-                color_continuous_scale=custom_colorscale, # Using custom scale
+                color_continuous_scale=custom_colorscale, 
                 text_auto=True,
                 aspect="auto",
-                range_color=[0, 1] # Set the scale from 0 to 1
+                range_color=[0, 1] 
             )
-            # --- END MODIFIED CODE ---
+
             
             st.plotly_chart(fig_corr, use_container_width=True) 
         else:
@@ -1019,8 +1037,7 @@ with tab3:
         st.info("No data available for advanced analytics.")
 
 
-# TAB 4 – Acceptance Patterns
-# --- THIS IS THE MODIFIED SECTION ---
+
 with tab4:
     st.subheader(f"Acceptance Patterns{graph_title_suffix}")
 
@@ -1039,12 +1056,12 @@ with tab4:
             acceptance_col = 'accepted_target'
         
         else:
-            # --- NEW LOGIC FOR FILTERED DATA ---
+
             st.info("Showing filtered acceptance patterns. Defaulting to T20. Use filters to analyze other tiers.")
             if 't20_accepted' in graph_df.columns:
                  acceptance_col = 't20_accepted'
                  analysis_target = "T20 Schools"
-            # You could add a selectbox here to choose T5/T10/T20/T50
+
             
         if not acceptance_col or acceptance_col not in graph_df.columns:
             st.info("Select a specific school or apply a Tier filter (e.g., T20) to view patterns.")
@@ -1248,14 +1265,10 @@ with tab4:
     else:
         st.info("No profiles to display.")
 
-# --- END OF MODIFIED SECTION ---
-
-
-# TAB 5 – Profile Matching
 
 if SKLEARN_AVAILABLE:
     with tab5:
-        st.subheader("🔍 Find Similar Profiles")
+        st.subheader("Find Similar Profiles")
         st.caption(
             "This tool uses the **currently filtered data**. Broader filters will yield more diverse matches."
         )
@@ -1287,38 +1300,52 @@ if SKLEARN_AVAILABLE:
                     "Number of Awards:", 0, 50, 0, key="match_awards"
                 )
                 user_stem = st.checkbox("STEM Major?", value=False, key="match_stem")
-                # Note: user_stem is not currently used in the model, but could be
-                # by adding a 'stem_major_numeric' column.
+   
+            nn, scaler, train_df, feature_weights = get_nn_model(filtered_df)
 
             if st.button("Find Similar Profiles"):
-                # 1. Get the cached model
-                nn, scaler, train_df, feature_weights = get_nn_model(filtered_df)
 
+                st.session_state.similar_profiles = [] 
+                
                 if nn is None:
                     st.warning(
                         "Not enough data for matching (need > 5 profiles with full data). Try relaxing your filters."
                     )
                 else:
-                    # 2. Get user features
+
                     user_features = np.array(
                         [[user_gpa, user_sat_eq, user_ap, user_ecs, user_awards]]
                     )
                     
-                    # 3. Transform user features
+
                     user_features_scaled = scaler.transform(user_features)
-                    user_features_scaled *= feature_weights # Apply same weights
-                    
-                    # 4. Find neighbors (this is now super fast)
+                    user_features_scaled *= feature_weights
+
                     distances, indices = nn.kneighbors(user_features_scaled)
 
-                    st.subheader("Most Similar Profiles (from filtered data):")
+                    
+                    for dist, idx in zip(distances[0], indices[0]):
+                        profile_id = train_df.iloc[idx].name
+                        st.session_state.similar_profiles.append(
+                            {"id": profile_id, "distance": dist}
+                        )
+                
 
-                    for i, (dist, idx) in enumerate(
-                        zip(distances[0], indices[0]), 1
-                    ):
-                        # Use .iloc[idx] on the train_df returned from the model
-                        similar_profile = train_df.iloc[idx]
-                        profile_id = similar_profile.name # .name is the index
+                st.rerun()
+
+            if st.session_state.similar_profiles is not None:
+                st.subheader("Most Similar Profiles (from filtered data):")
+                
+                if not st.session_state.similar_profiles:
+                     st.info("No similar profiles found.")
+                
+                for i, match in enumerate(st.session_state.similar_profiles, 1):
+                    profile_id = match["id"]
+                    dist = match["distance"]
+                    
+                
+                    if profile_id in df.index:
+                        similar_profile = df.loc[profile_id]
 
                         with st.container(border=True):
                             st.write(f"**Similar Profile #{i}** (Distance: {dist:.2f})")
@@ -1344,14 +1371,11 @@ if SKLEARN_AVAILABLE:
                                 key=f"match_view_{profile_id}",
                             ):
                                 st.session_state.selected_profile_idx = profile_id
-                                st.rerun()
-        
-        # Modal display logic for this tab
-        if st.session_state.selected_profile_idx is not None:
-            display_profile_modal(st.session_state.selected_profile_idx, context="tab5")
-
-
-# TAB 6 – Summary Statistics
+                                
+                    else:
+                        st.warning(f"Profile {profile_id} no longer in dataset. Please reset filters.")
+            
+         
 
 with tab6:
     st.subheader("Summary Statistics (Based on Filters)")
@@ -1456,3 +1480,7 @@ with tab6:
         st.info("No profiles match the current filter selection.")
     else:
         st.info("Apply filters to see summary statistics based on the filtered dataset.")
+
+
+if st.session_state.selected_profile_idx is not None:
+    display_profile_modal(st.session_state.selected_profile_idx, context="global")
