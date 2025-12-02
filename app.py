@@ -3,7 +3,7 @@ import os
 import logging
 import json
 import sqlite3
-from sqlalchemy import text  # Imported 'text'
+from sqlalchemy import text  
 
 import numpy as np
 import pandas as pd
@@ -199,7 +199,7 @@ st.sidebar.caption(
     "Adjust the filters below and click **Apply Filters** to update the dashboard."
 )
 
-with st.sidebar.expander("📊 Academic Filters", expanded=True):
+with st.sidebar.expander(" Academic Filters", expanded=True):
     gpa_range = st.slider(
         "Unweighted GPA Range",
         min_value=0.0,
@@ -630,7 +630,7 @@ tab_names = [
     " Summary Statistics",
 ]
 if SKLEARN_AVAILABLE:
-    tab_names.insert(4, "🔍 Find Similar Profiles")
+    tab_names.insert(4, "Find Similar Profiles")
 
 tabs = st.tabs(tab_names)
 
