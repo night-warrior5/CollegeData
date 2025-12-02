@@ -64,41 +64,43 @@ The "Applicant Browser" lets you see what successful applications look like for 
 
 ## **Detailed Feature List**
 
-The dashboard is organized into several tabs, each providing a different analytical view:
+Here is the updated list of dashboard features:
 
-* **Powerful Filtering:** A sidebar allows users to filter the entire dataset by:  
-  * Unweighted GPA Range  
-  * SAT Equivalent Score Range  
-  * STEM Major status  
-  * Test Optional status  
-  * Specific Majors  
-  * Specific Races  
-  * Acceptance Tiers (T5, T10, T20, T50)  
-* **Overview Charts:**  
-  * An interactive **GPA vs. SAT Equivalent** scatter plot.  
-  * **Clickable Profiles:** Click any point on the scatter plot to open a full detail view of that applicant.  
-  * Histograms showing the distribution of extracurriculars and award counts.  
-* **Applicant Browser:**  
-  * A searchable, paginated table of all applicants that match the current filters.  
-  * Allows selection of any applicant from the table to open their full profile.  
-* **Advanced Analytics:**  
-  * GPA and SAT score distributions (box plots).  
-  * A correlation matrix (heatmap) showing the relationship between numeric features like GPA, SAT, and number of AP classes.  
-  * Acceptance rate breakdown by major type (STEM vs. Non-STEM) when viewing a specific school.  
-* **Acceptance Patterns:**  
-  * A powerful tool to analyze acceptance rates for a specific school *or* a filtered tier (e.g., T20).  
-  * Shows acceptance rate percentages broken down by **GPA range** (e.g., 3.5-3.7, 3.7-3.9) and **SAT range** (e.g., 1400-1500, 1500-1550).  
-  * Includes a "Test Optional" bucket to compare their acceptance rates.  
-* **Find Similar Profiles:**  
-  * A profile matching tool using a k-Nearest Neighbors model.  
-  * Users can input their own stats (GPA, SAT, APs, etc.) and find the 5 most similar profiles from the filtered dataset.  
-* **Summary Statistics:**  
-  * Key metrics (average GPA, average SAT, etc.) for the filtered data.  
-  * New charts showing the distribution of top majors and race.  
-* **Persistent Profile Ratings:**  
-  * When viewing a profile's details, users can submit a 1-10 rating.  
-  * These ratings are saved permanently in a local SQLite database (profile\_ratings.db).
-
+* **Powerful Filtering:** A sidebar allows users to filter the entire dataset(this effects most of the other features tures by:
+    * Unweighted GPA Range
+    * SAT Equivalent Score Range
+    * STEM Major status
+    * Test Optional status
+    * Specific Majors
+    * Specific Races
+    * EC Categories
+    * Award Categories
+    * Acceptance Tiers (T5, T10, T20, T50)
+* **Overview Charts:**
+    * An interactive **GPA vs. SAT Equivalent** scatter plot.
+    * **Clickable Profiles:** Click any point on the scatter plot to open a full detail view of that applicant.
+    * Histograms showing the distribution of extracurriculars and award counts.
+* **Applicant Browser:**
+    * A searchable, paginated table of all applicants that match the current filters.
+    * Allows selection of any applicant from the table to open their full profile.
+* **Advanced Analytics:**
+    * GPA and SAT score distributions (box plots).
+    * A **correlation matrix** (heatmap) showing the relationship between numeric features like GPA, SAT, and number of AP classes.
+    * Acceptance rate breakdown by major type (STEM vs. Non-STEM) when viewing a specific school.
+* **Acceptance Patterns:**
+    * A powerful tool to analyze acceptance rates for a specific school *or* a filtered tier (e.g., T20).
+    * Shows acceptance rate percentages broken down by **GPA range** (e.g., 3.5-3.7, 3.7-3.9) and **SAT range** (e.g., 1400-1500, 1500-1550).
+    * Includes a "Test Optional" bucket to compare their acceptance rates.
+    * Displays acceptance rate breakdowns by the **Top 10 EC Categories** and **Top 10 Award Categories**.
+* **Find Similar Profiles:**
+    * A profile matching tool using a k-Nearest Neighbors model.
+    * Users can input their own stats (GPA, SAT, APs, etc.) and find the 5 most similar profiles from the filtered dataset.
+* **Summary Statistics:**
+    * Key metrics (average GPA, average SAT, etc.) for the filtered data.
+    * New charts showing the distribution of top majors and race.
+* **Persistent Profile Ratings:**
+    * When viewing a profile's details, users can submit a 1-10 rating.
+    * These ratings are saved permanently in a local SQLite database (`profile_ratings.db`).
 ## **How It Works**
 
 1. **CollegeBase.py (Data Backend):**  
@@ -115,35 +117,3 @@ The dashboard is organized into several tabs, each providing a different analyti
 3. **profiles.jsonl:**  
    * The raw database. Each line is a JSON object representing one applicant.
 
-## **How to Run**
-
-### **Option 1: Use the Batch File (Windows)**
-
-The simplest way to run the app is to use the provided batch file:
-
-1. Double-click run\_app.bat.  
-2. This script will automatically install all required Python packages and then start the Streamlit app.  
-3. It will open in your default web browser.
-
-### **Option 2: Manual Installation (All Platforms)**
-
-If you aren't on Windows or prefer to run it manually:
-
-1. **Install dependencies:**  
-   pip install streamlit pandas plotly numpy sqlalchemy scikit-learn
-
-2. **Run the app:**  
-   streamlit run app.py
-
-## **How to Add a New Profile**
-
-You can add new applicant profiles to the profiles.jsonl database by running the CollegeBase.py script directly in your terminal.
-
-1. Open your terminal or command prompt.  
-2. Run the script:  
-   python CollegeBase.py
-
-3. Select **Mode 1** ("Enter a New Profile").  
-4. Follow the prompts to enter the applicant's stats, ECs, awards, and results.  
-5. The script will automatically generate a unique ID, check for duplicates, and save the new profile to profiles.jsonl.  
-6. Relaunch the Streamlit app to see the new data.
