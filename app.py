@@ -3,7 +3,7 @@ import os
 import logging
 import json
 import sqlite3
-from sqlalchemy import text  
+from sqlalchemy import text  # Imported 'text'
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from CollegeBase import load_data
+
+
+#  Global Configuration and User Experience Polishing
 
 
 warnings.filterwarnings("ignore", message=".*ScriptRunContext.*")
@@ -267,7 +270,7 @@ with st.sidebar.expander(" Profile Attributes", expanded=True):
     )
 
 # --- NEW FILTER SECTION ---
-with st.sidebar.expander(" EC & Award Filters"):
+with st.sidebar.expander(" 🏆 EC & Award Filters"):
     ec_category_filter = st.multiselect(
         "Filter by EC Category:",
         options=all_ec_categories,
@@ -1529,6 +1532,4 @@ with tab6:
 
 
 if st.session_state.selected_profile_idx is not None:
-
     display_profile_modal(st.session_state.selected_profile_idx, context="global")
-
