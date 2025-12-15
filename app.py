@@ -3,7 +3,7 @@ import os
 import logging
 import json
 import sqlite3
-from sqlalchemy import text  # Imported 'text'
+from sqlalchemy import text  
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ import streamlit as st
 from CollegeBase import load_data
 
 
-#  Global Configuration and User Experience Polishing
+
 
 
 warnings.filterwarnings("ignore", message=".*ScriptRunContext.*")
@@ -37,10 +37,10 @@ except ImportError:
 st.set_page_config(
     layout="wide",
     page_title="Admissions Insights Dashboard",
-    page_icon="🎓",
+    page_icon="",
 )
 
-# Simple custom styling
+
 st.markdown(
     """
     <style>
@@ -70,7 +70,7 @@ st.caption(
 
 
 
-#  ACT to SAT Concordance
+
 
 
 ACT_TO_SAT_CONCORDANCE = {
@@ -92,7 +92,7 @@ def get_act_equivalent(sat_score: int):
 
 
 
-#  Rating System (Persistent Database)
+
 
 
 # Initialize the connection to a persistent SQLite database
@@ -162,13 +162,13 @@ if df.empty:
 all_majors = sorted(list(df["majors"].explode().dropna().astype(str).unique()))
 all_races = sorted(list(df["race"].explode().dropna().astype(str).unique()))
 
-# --- NEW: Get EC and Award categories for filters ---
+# Get EC and Award categories for filters ---
 all_ec_categories = sorted(list(df["ec_categories"].explode().dropna().astype(str).unique()))
 all_award_categories = sorted(list(df["award_categories"].explode().dropna().astype(str).unique()))
 # Remove "Other" as it's not a useful filter
 if "Other" in all_ec_categories: all_ec_categories.remove("Other")
 if "Other" in all_award_categories: all_award_categories.remove("Other")
-# --- END NEW ---
+
 
 acceptances_set = set(df["acceptances"].explode().dropna().astype(str).unique())
 rejections_set = set(df["rejections"].explode().dropna().astype(str).unique())
@@ -269,8 +269,8 @@ with st.sidebar.expander(" Profile Attributes", expanded=True):
         key="widget_race_filter",
     )
 
-# --- NEW FILTER SECTION ---
-with st.sidebar.expander(" 🏆 EC & Award Filters"):
+
+with st.sidebar.expander(" EC & Award Filters"):
     ec_category_filter = st.multiselect(
         "Filter by EC Category:",
         options=all_ec_categories,
@@ -286,7 +286,7 @@ with st.sidebar.expander(" 🏆 EC & Award Filters"):
         key="widget_award_filter",
         help="Show profiles that have at least one of the selected Award categories."
     )
-# --- END NEW FILTER SECTION ---
+
 
 
 with st.sidebar.expander("Acceptance Tiers"):
@@ -308,8 +308,8 @@ with col_btn1:
         st.session_state.active_major_filter = st.session_state.widget_major_filter
         st.session_state.active_race_filter = st.session_state.widget_race_filter
         st.session_state.active_tier_filter = st.session_state.widget_tier_filter
-        st.session_state.active_ec_filter = st.session_state.widget_ec_filter       # <-- ADDED
-        st.session_state.active_award_filter = st.session_state.widget_award_filter # <-- ADDED
+        st.session_state.active_ec_filter = st.session_state.widget_ec_filter      
+        st.session_state.active_award_filter = st.session_state.widget_award_filter 
         st.session_state.selected_profile_idx = None
     
         # Clear similar profile results when filters change
@@ -327,8 +327,8 @@ with col_btn2:
             "active_major_filter",
             "active_race_filter",
             "active_tier_filter",
-            "active_ec_filter",      # <-- ADDED
-            "active_award_filter",   # <-- ADDED
+            "active_ec_filter",      
+            "active_award_filter",   
         ]:
             st.session_state.pop(key, None)
         st.session_state.selected_profile_idx = None
@@ -354,8 +354,8 @@ def apply_filters(df_in: pd.DataFrame) -> pd.DataFrame:
     major_filter_ = st.session_state.active_major_filter
     race_filter_ = st.session_state.active_race_filter
     tier_filter_ = st.session_state.active_tier_filter
-    ec_filter_ = st.session_state.active_ec_filter           # <-- ADDED
-    award_filter_ = st.session_state.active_award_filter     # <-- ADDED
+    ec_filter_ = st.session_state.active_ec_filter          
+    award_filter_ = st.session_state.active_award_filter   
 
 
     # Test Optional
@@ -417,7 +417,7 @@ def apply_filters(df_in: pd.DataFrame) -> pd.DataFrame:
 
         filtered_df_ = filtered_df_[mask]
 
-    # --- NEW FILTER LOGIC ---
+    
     # EC Category Filter
     if ec_filter_:
         def has_ec_category(ecs):
@@ -435,7 +435,7 @@ def apply_filters(df_in: pd.DataFrame) -> pd.DataFrame:
             return any(award in awards for award in award_filter_)
 
         filtered_df_ = filtered_df_[filtered_df_["award_categories"].apply(has_award_category)]
-    # --- END NEW FILTER LOGIC ---
+    
 
     return filtered_df_
 
@@ -473,13 +473,13 @@ if st.session_state.get("filters_applied", False):
     if st.session_state.active_race_filter:
         filter_chips.append(f"Race: {', '.join(st.session_state.active_race_filter)}")
     
-    # --- ADDED ---
+    
     if st.session_state.active_ec_filter:
         filter_chips.append(f"ECs: {', '.join(st.session_state.active_ec_filter)}")
 
     if st.session_state.active_award_filter:
         filter_chips.append(f"Awards: {', '.join(st.session_state.active_award_filter)}")
-    # --- END ADDED ---
+    
 
     if st.session_state.active_tier_filter:
         filter_chips.append(f"Tiers: {', '.join(st.session_state.active_tier_filter)}")
@@ -595,7 +595,7 @@ def display_profile_modal(profile_idx, context: str = ""):
         accepts = profile.get("acceptances", [])
         if isinstance(accepts, list) and accepts:
             for school in accepts:
-                st.write(f"✅ {school}")
+                st.write(f" {school}")
         else:
             st.write("None listed")
 
@@ -603,7 +603,7 @@ def display_profile_modal(profile_idx, context: str = ""):
         rejects = profile.get("rejections", [])
         if isinstance(rejects, list) and rejects:
             for school in rejects:
-                st.write(f"❌ {school}")
+                st.write(f" {school}")
         else:
             st.write("None listed")
 
@@ -717,7 +717,7 @@ else:
     tab6 = tabs[4] # tab5 (matching) is skipped
 
 
-# TAB 1 – Overview Charts
+#  Overview Charts
 
 with tab1:
     col1, col2 = st.columns(2)
@@ -782,7 +782,7 @@ with tab1:
                     )
                     fig.update_layout(clickmode="event+select")
                     
-                    # 1. Capture the chart's event data
+                    # Capture the chart's event data
                     chart_event = st.plotly_chart(
                         fig, 
                         use_container_width=True, 
@@ -790,9 +790,9 @@ with tab1:
                         on_select="rerun" # Use rerun on select
                     )
 
-                    st.caption("💡 Tip: Click a profile on the chart to view full details.")
+                    st.caption(" Tip: Click a profile on the chart to view full details.")
 
-                    # 2. Check if a point was clicked in selection
+                    # Check if a point was clicked in selection
                     if chart_event.selection:
                         clicked_point = chart_event.selection.get('points')
                         if clicked_point:
@@ -852,7 +852,7 @@ with tab1:
 
 
 
-# TAB 2 – Applicant Browser
+#  Applicant Browser
 
 with tab2:
     st.subheader("Searchable Applicant Database")
@@ -935,12 +935,12 @@ with tab2:
             page_df[display_cols_final],
             use_container_width=True, 
             hide_index=True,
-            on_select="rerun", # Trigger a rerun when a row is clicked
+            on_select="rerun", 
             selection_mode="single-row",
-            key="browser_table" # Key to access selection state
+            key="browser_table"
         )
         
-        st.caption("💡 Tip: Click any row in the table to view the full profile.")
+        st.caption(" Tip: Click any row in the table to view the full profile.")
 
         # Check if a selection was made in the table
         if st.session_state.browser_table and st.session_state.browser_table.selection.rows:
@@ -968,7 +968,7 @@ with tab2:
     
 
 
-# TAB 3 – Advanced Analytics
+#  Advanced Analytics
 
 with tab3:
     st.subheader(f"Advanced Analytics{graph_title_suffix}")
@@ -1170,7 +1170,7 @@ with tab4:
                 else:
                     st.info("Not enough GPA data to compute ranges.")
 
-            # Acceptance rate by SAT range
+            # Acceptance rate by sat range
             with col2:
                 st.subheader("Acceptance Rate by SAT Equivalent Range")
                 sat_ranges = [(400, 1400), (1400, 1500), (1500, 1550), (1550, 1601)]
@@ -1196,7 +1196,7 @@ with tab4:
                             }
                         )
 
-                # Test optional bucket
+                # Test optional 
                 to_df = graph_df[graph_df["test_optional"] == True]  # noqa
                 if len(to_df) > 0:
                     accepted = to_df[acceptance_col].sum()
@@ -1225,7 +1225,7 @@ with tab4:
                 else:
                     st.info("Not enough SAT data to compute ranges.")
 
-            # --- NEW SECTION FOR EC AND AWARD CATEGORIES ---
+
             st.divider()
             col3, col4 = st.columns(2)
 

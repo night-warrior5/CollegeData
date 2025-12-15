@@ -2,10 +2,7 @@ import pandas as pd
 import json
 import numpy as np
 import hashlib
-import re # Import regex for better keyword matching
-
-
-# Core Utility Functions
+import re 
 
 def prompt(msg):
     "Prompts the user and returns the stripped input."
@@ -23,7 +20,7 @@ def prompt_numbered_list(label):
         if entry:
             items.append(entry)
             i += 1
-    # Sort the list to ensure consistent hashing later (for profile id)
+   
     return sorted(items)
 
 def normalize_gpa(x):
@@ -50,9 +47,9 @@ def generate_profile_id(profile):
         str(profile.get('ib_classes')),
         str(profile.get('college_credit_classes')),
         '|'.join(profile.get('majors', [])),
-        str(profile.get('gender', '')),           # <-- THIS IS THE FIX
+        str(profile.get('gender', '')),           
         '|'.join(profile.get('race', [])),
-        # Sorted ECs/Awards ensure consistency
+     
         '|'.join(profile.get('awards', [])),
         '|'.join(profile.get('extracurriculars', []))
     ]
@@ -612,6 +609,7 @@ MAJOR_ALIASES = {
 }
 # ACT-to-SAT Concordance Table 
 # This maps ACT Composite to the nearest SAT equivalent
+# Kinda redundant with the SAT-to-ACT map due to app.py having it as well
 ACT_TO_SAT_CONCORDANCE = {
     36: 1600, 35: 1570, 34: 1520, 33: 1490, 32: 1450, 31: 1420, 30: 1390,
     29: 1360, 28: 1330, 27: 1300, 26: 1260, 25: 1230, 24: 1200, 23: 1160,
@@ -892,7 +890,7 @@ def load_profiles(path="profiles.jsonl"):
 
     df = pd.DataFrame(rows)
     
-    # --- Data Cleaning: Handle malformed rows ---
+   
     # Some profiles from the user file have nested/malformed data.
     # We will try to flatten them.
     def clean_column(col_series, col_name):
@@ -946,7 +944,7 @@ def load_profiles(path="profiles.jsonl"):
     # Drop profiles that are mostly empty (e.g., just an ID)
     df = df.dropna(subset=['gpa_unweighted', 'sat', 'act'], how='all')
     
-    # --- THIS IS THE KEY CHANGE ---
+
     # We will ALWAYS regenerate the profile_id from the content because
     # the IDs in the source file are unreliable and duplicated.
     print("Regenerating all profile IDs from content to ensure uniqueness...")
@@ -1015,7 +1013,6 @@ def augment_dataframe(df):
 
     df['stem_major'] = df['majors'].apply(is_stem_major)
 
-    # --- Extract EC and Award categories ---
     print("Extracting EC and Award categories...")
     if 'extracurriculars' in df.columns:
         df['ec_categories'] = df['extracurriculars'].apply(
@@ -1026,7 +1023,7 @@ def augment_dataframe(df):
         df['award_categories'] = df['awards'].apply(
             lambda x: extract_categories(x, AWARD_CATEGORY_MAP)
         )
-    # --- End new block ---
+ 
 
     # Tiered Acceptance Flags # Based on 2024-2025 US News National University Rankings
     
@@ -1038,14 +1035,14 @@ def augment_dataframe(df):
         "Princeton University", "Massachusetts Institute of Technology", "Harvard University", "Stanford University", "California Institute of Technology",
         "University of Chicago", "Yale University", "University of Pennsylvania", "Johns Hopkins University", "Brown University",
         "Columbia University", "Northwestern University"
-    ] # 12 schools due to 3-way tie at #9
+    ] 
 
     t20 = [
         "Princeton University", "Massachusetts Institute of Technology", "Harvard University", "Stanford University", "California Institute of Technology",
         "University of Chicago", "Yale University", "University of Pennsylvania", "Johns Hopkins University", "Brown University",
         "Columbia University", "Northwestern University", "Cornell University", "University of California, Berkeley", "University of California, Los Angeles",
         "Dartmouth College", "Duke University", "University of Michigan-Ann Arbor", "Vanderbilt University"
-    ] # 19 schools due to 2-way tie at #18
+    ] 
     
     t50 = [
         "Princeton University", "Massachusetts Institute of Technology", "Harvard University", "Stanford University", "California Institute of Technology",
@@ -1108,7 +1105,7 @@ if __name__ == "__main__":
             
         
             try:
-                # --- MODIFIED SAVE LOGIC ---
+                
                 # Now that we have re-generated all IDs, we can safely
                 # drop duplicates. This will only drop *true content* duplicates,
                 # not unique profiles that shared a bad ID.
@@ -1121,7 +1118,7 @@ if __name__ == "__main__":
                 df_to_save.to_json(data_path, orient="records", lines=True, force_ascii=False)
                 print(f"\n✔ Successfully saved {len(df_to_save)} fully analyzed profiles back to {data_path}.")
             except Exception as e:
-                print(f"\n❌ Error saving augmented data back to file: {e}")
+                print(f"\n Error saving augmented data back to file: {e}")
             
             
             print("\nReady for Trend Analysis and UI features...")
